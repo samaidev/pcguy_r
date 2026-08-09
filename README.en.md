@@ -39,5 +39,6 @@ samai.cc is a group focused on AI and system-tool development, dedicated to help
 
 ## License
 
-This repository is for product introduction and installer distribution only. The source code lives in [samaidev/pcguy](https://github.com/samaidev/pcguy) (private).
+PC Guy is **proprietary software (closed source)**, all rights reserved. This repository is for product introduction and installer distribution only. It contains no source code and the source is not published. Redistribution, reverse engineering, or modification of the distributed binary without written permission from samaidev is prohibited.
+
 
