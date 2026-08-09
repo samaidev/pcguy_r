@@ -1,5 +1,7 @@
 # PC Guy
 
+[English](README.en.md) | 中文
+
 > 由 [samai.cc](https://samai.cc) 集团出品的 Windows 系统优化工具箱。
 
 PC Guy 是一款使用 Go 语言开发、基于 Web 管理面板的 Windows 桌面工具，常驻系统托盘，帮助你轻松优化与维护 Windows 电脑。
@@ -38,3 +40,4 @@ samai.cc 是一个专注于 AI 与系统工具研发的集团，致力于用智�
 ## 许可证
 
 本仓库仅用于产品介绍与安装包分发。源代码仓库见 [samaidev/pcguy](https://github.com/samaidev/pcguy)（私有）。
+
