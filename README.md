@@ -1,5 +1,7 @@
 # PC Guy
 
+[中文](README.zh.md) | English
+
 > A Windows system optimization toolkit by the [samai.cc](https://samai.cc) group.
 
 PC Guy is a Windows desktop utility written in Go, with a web-based management panel and a system tray icon, helping you easily optimize and maintain your Windows PC.
