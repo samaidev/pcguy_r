@@ -34,7 +34,3 @@ pcguy.exe --lang zh # Chinese
 ## About samai.cc
 
 samai.cc is a group focused on AI and system-tool development, dedicated to helping users get more out of their computers through intelligent solutions. Learn more at <https://samai.cc>.
-
-## License
-
-This repository is for product introduction and installer distribution only. The source code lives in [samaidev/pcguy](https://github.com/samaidev/pcguy) (private).
