@@ -1,44 +1,40 @@
 # PC Guy
 
-[English](README.en.md) | 中文
+> A Windows system optimization toolkit by the [samai.cc](https://samai.cc) group.
 
-> 由 [samai.cc](https://samai.cc) 集团出品的 Windows 系统优化工具箱。
+PC Guy is a Windows desktop utility written in Go, with a web-based management panel and a system tray icon, helping you easily optimize and maintain your Windows PC.
 
-PC Guy 是一款使用 Go 语言开发、基于 Web 管理面板的 Windows 桌面工具，常驻系统托盘，帮助你轻松优化与维护 Windows 电脑。
+## Features
 
-## 功能特性
+- **Memory Cleanup**: Scan memory usage and free up memory by clearing working sets of processes with one click.
+- **CPU Monitor**: View CPU usage, core count, temperature (temperature may be unavailable on some devices), and process count.
+- **Process Manager**: List all processes with CPU/memory usage, sort by usage, and terminate suspicious or high-usage processes (with auto-refresh).
+- **Junk Cleaner**: Scan and clean system temp files, Recycle Bin, browser caches, Windows logs, prefetch, and recent documents.
+- **Software Manager**: List installed software and uninstall with one click.
+- **Startup Manager**: View / enable / disable / delete startup items (registry Run keys and Startup folder).
+- **Force Delete**: Recursively force-delete folders (ignoring read-only / hidden attributes).
+- **Agent Takeover**: Bundles the `samcommand` service. Temporarily enable "Takeover Mode" so another AI agent can execute commands remotely via a public URL to help fix issues; the panel shows the public address and auth token — turn it off when done.
+- **System Tray**: Right-click menu with mutually exclusive "Run at startup / Cancel startup", "Enable / Disable takeover mode", "Management panel", and "Exit".
 
-- **内存清理**：扫描内存使用率，一键清理各进程工作集，释放可用内存。
-- **CPU 监控**：查看 CPU 占用率、核心数、温度（部分设备温度可能不支持）与进程数。
-- **进程管理**：列出全部进程及 CPU/内存占用，支持按占用排序、结束可疑或高占用进程（带自动刷新）。
-- **垃圾清理**：扫描并清理系统临时文件、回收站、浏览器缓存、Windows 日志、预读取、最近文档。
-- **软件管理**：列出已安装软件，支持一键卸载。
-- **启动项管理**：查看 / 启用 / 禁用 / 删除开机启动项（注册表 Run 与启动文件夹）。
-- **强制删除**：递归强制删除文件夹（忽略只读 / 隐藏属性）。
-- **智能体接管**：内嵌 `samcommand` 服务，可临时开启「接管模式」，让其他 AI 智能体通过公共 URL 远程执行命令协助修复问题；面板显示公共地址与授权 Token，用完即关。
-- **系统托盘**：右键菜单含「开机启动 / 取消开机启动」「开启 / 关闭接管模式」「管理面板」「退出」。
+## Download & Install
 
-## 下载与安装
+Go to the [Releases](https://github.com/samaidev/pcguy_r/releases) page and download the latest `PCGuy-setup-x.x.x.exe` installer. Double-click to install; shortcuts are created on the desktop and in the Start menu.
 
-前往 [Releases](https://github.com/samaidev/pcguy_r/releases) 页面，下载最新的 `PCGuy-setup-x.x.x.exe` 安装包，双击运行即可完成安装，并在桌面与开始菜单创建快捷方式。
+## Usage
 
-## 使用
+After launch, the PC Guy icon appears in the system tray. Right-click to open the management panel or exit.
 
-启动后系统托盘出现 PC Guy 图标，右键可打开管理面板或退出。
-
-默认界面为中文，支持英文。可通过页面右上角按钮或启动参数切换：
+The UI defaults to English and also supports Chinese. Switch via the button at the top-right of the panel or a launch argument:
 
 ```bash
-pcguy.exe            # 中文（默认）
-pcguy.exe --lang en # 英文
+pcguy.exe            # English (default)
+pcguy.exe --lang zh # Chinese
 ```
 
-## 关于 samai.cc
+## About samai.cc
 
-samai.cc 是一个专注于 AI 与系统工具研发的集团，致力于用智能化手段帮助用户更高效地使用计算机。更多产品信息请访问 <https://samai.cc>。
+samai.cc is a group focused on AI and system-tool development, dedicated to helping users get more out of their computers through intelligent solutions. Learn more at <https://samai.cc>.
 
-## 许可证
+## License
 
-PC Guy 为**专有软件（闭源）**，保留所有权利。本仓库仅用于产品介绍与安装包分发，不包含也不公开任何源代码。未经 samaidev 书面许可，不得对分发的二进制进行再分发、逆向工程或修改。
-
-
+This repository is for product introduction and installer distribution only. The source code lives in [samaidev/pcguy](https://github.com/samaidev/pcguy) (private).
