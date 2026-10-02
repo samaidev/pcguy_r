@@ -20,7 +20,13 @@ PC Guy is a Windows desktop utility written in Go, with a web-based management p
 
 ## Download & Install
 
-Go to the [Releases](https://github.com/samaidev/pcguy_r/releases) page and download the latest `PCGuy-setup-x.x.x.exe` installer. Double-click to install; shortcuts are created on the desktop and in the Start menu.
+Go to the [Releases](https://github.com/samaidev/pcguy_r/releases) page and download the latest `PCGuy-setup-x.x.x.exe` installer. Double-click to install; shortcuts are created on the desktop and in the Start menu. A portable edition (`PCGuy-x.x.x-portable.zip`, no installer) is also attached to each release and mirrored in this repository.
+
+**Latest: v1.1.14** — bundles `samcommand` v1.9.0:
+
+- Agent-takeover file transfer now supports **files up to 1 GB** with **chunked resumable upload** — interrupted transfers automatically resume from the last confirmed byte instead of restarting from zero.
+- The web terminal shows an English notice up front: uploads are limited to 1 GB (chunked resumable only); oversized files are rejected before any byte is sent.
+- Transfer stability tuned for the aitun tunnel: adaptive chunk sizing, exponential backoff with jitter, and per-chunk integrity verification.
 
 ## Usage
 
