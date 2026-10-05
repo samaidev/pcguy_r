@@ -2,7 +2,7 @@
 
 [中文](README.zh.md) | English
 
-> A Windows system optimization toolkit by the [samai.cc](https://samai.cc) group.
+> A Windows system management and AI assistant toolkit by the [samai.cc](https://samai.cc) group.
 
 PC Guy is a Windows desktop utility written in Go, with a web-based management panel and a system tray icon, helping you easily optimize and maintain your Windows PC.
 
@@ -15,6 +15,7 @@ PC Guy is a Windows desktop utility written in Go, with a web-based management p
 - **Software Manager**: List installed software and uninstall with one click.
 - **Startup Manager**: View / enable / disable / delete startup items (registry Run keys and Startup folder).
 - **Force Delete**: Recursively force-delete folders (ignoring read-only / hidden attributes).
+- **🤖 AI 智能助手**：内置 AI 对话助手，支持自然语言交互。用户可直接在面板中与 AI 对话，咨询系统问题、获取操作建议、让 AI 帮助分析电脑状况并执行任务
 - **Agent Takeover**: Bundles the `samcommand` service. Temporarily enable "Takeover Mode" so another AI agent can execute commands remotely via a public URL to help fix issues; the panel shows the public address and auth token — turn it off when done.
 - **System Tray**: Right-click menu with mutually exclusive "Run at startup / Cancel startup", "Enable / Disable takeover mode", "Management panel", and "Exit".
 
