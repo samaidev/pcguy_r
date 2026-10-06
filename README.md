@@ -7,6 +7,7 @@
 PC Guy is a Windows desktop utility written in Go, with a web-based management panel and a system tray icon, helping you easily optimize and maintain your Windows PC.
 
 ## Features
+- **🤖 AI Smart Assistant**: Built-in AI chat assistant with natural language interaction. Users can chat with AI directly in the panel, consult system issues, get operation suggestions, and let AI help analyze computer conditions and execute tasks.
 
 - **Memory Cleanup**: Scan memory usage and free up memory by clearing working sets of processes with one click.
 - **CPU Monitor**: View CPU usage, core count, temperature (temperature may be unavailable on some devices), and process count.
@@ -15,7 +16,6 @@ PC Guy is a Windows desktop utility written in Go, with a web-based management p
 - **Software Manager**: List installed software and uninstall with one click.
 - **Startup Manager**: View / enable / disable / delete startup items (registry Run keys and Startup folder).
 - **Force Delete**: Recursively force-delete folders (ignoring read-only / hidden attributes).
-- **🤖 AI Smart Assistant**: Built-in AI chat assistant with natural language interaction. Users can chat with AI directly in the panel, consult system issues, get operation suggestions, and let AI help analyze computer conditions and execute tasks.
 - **Agent Takeover**: Bundles the `samcommand` service. Temporarily enable "Takeover Mode" so another AI agent can execute commands remotely via a public URL to help fix issues; the panel shows the public address and auth token — turn it off when done.
 - **System Tray**: Right-click menu with mutually exclusive "Run at startup / Cancel startup", "Enable / Disable takeover mode", "Management panel", and "Exit".
 
