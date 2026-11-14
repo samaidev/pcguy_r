@@ -1,7 +1,8 @@
 # sync-release-mirrors: Release 发布后自动——
 #   1) 下载安装包资产并重算 manifest.txt, 提交回本仓库 master (GitHub raw 清单立即生效)
-#   2) 同步安装包 + manifest 到 HuggingFace 镜像仓
-#   3) 同步安装包 + manifest 到 ModelScope 镜像仓 (未配置 MS_TOKEN 时自动跳过)
+#   2) HuggingFace dataset 镜像 (tchbcb/pcguy_r): 删仓重建, 历史永远只有最新一版
+#   3) ModelScope dataset 镜像 (luoyunlan168/pcguy_r): 同步上传 + 清理旧版 exe
+# 镜像执行 latest-only 策略: 只保留当前最新安装包, 真实文件名原样上传, 不做任何改名/伪装。
 # 凭证全部放仓库 Secrets, 不落任何明文: HF_TOKEN / MS_TOKEN (Settings → Secrets and variables → Actions)
 name: sync-release-mirrors
 
@@ -24,7 +25,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Resolve release asset
+      - name: Resolve release assets (installer + router)
         id: rel
         env:
           GH_TOKEN: ${{ github.token }}
@@ -54,6 +55,31 @@ jobs:
           echo "tag=${FNAME%.exe}" >> "$GITHUB_OUTPUT"
           echo "ver=$VER"     >> "$GITHUB_OUTPUT"
           echo "fname=$FNAME" >> "$GITHUB_OUTPUT"
+          # router exe (ModelScope 镜像附带, 尽力而为; 取最新 router-* 发布)
+          RURL="$(gh api "repos/${{ github.repository }}/releases?per_page=100" \
+            --jq '[.[] | select(.tag_name | startswith("router-")) | .assets[]? | select(.name == "pcguy-router.exe") | .browser_download_url][0]')"
+          if [ -n "$RURL" ]; then
+            curl -fsSL --retry 3 -o ms-router.exe "$RURL"
+            echo "router=ms-router.exe" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::未找到 router-* 发布的 pcguy-router.exe, ModelScope 镜像沿用旧路由器文件"
+            echo "router=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare mirror files
+        run: |
+          set -euo pipefail
+          cat > mirror_readme.md <<'MD'
+          # PCGuy 安装包镜像（仅保留最新版本）
+
+          本仓库是 PC Guy 最新版安装包的分发镜像（源仓库: https://github.com/samaidev/pcguy_r）。
+
+          - `PCGuy-setup-<版本>.exe` — 最新版安装包
+          - `manifest.txt` — 版本清单（版本号 / 文件名 / 字节数 / SHA-256）
+          - 每次发版自动同步并清理旧版本，仓库只保留当前最新版
+
+          下载后请核对 manifest.txt 中记录的 SHA-256 以验证文件完整性。
+          MD
 
       - name: Generate manifest
         env:
@@ -88,10 +114,9 @@ jobs:
             git push origin master
           fi
 
-      - name: Sync to HuggingFace
+      - name: Sync to HuggingFace (dataset 删仓重建, latest-only)
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_REPO: tchbcb/pcguy_r
           FNAME: ${{ steps.rel.outputs.fname }}
         run: |
           set -euo pipefail
@@ -104,21 +129,37 @@ jobs:
               sys.exit(0)
           from huggingface_hub import HfApi
           api = HfApi(token=tok)
-          repo = os.environ['HF_REPO']
+          repo = 'tchbcb/pcguy_r'
           fname = os.environ['FNAME']
-          api.create_repo(repo_id=repo, repo_type='model', private=False, exist_ok=True)
+          # 删仓重建: 历史清零, 仓库永远只含最新一版
+          try:
+              api.delete_repo(repo_id=repo, repo_type='dataset')
+          except Exception as e:
+              if 'RepositoryNotFound' in type(e).__name__ or '404' in str(e):
+                  pass                                   # 首次运行, 仓还不存在
+              else:
+                  print(f'::warning::dataset 删仓失败({type(e).__name__}), 降级为文件清理模式')
+          api.create_repo(repo_id=repo, repo_type='dataset', private=False, exist_ok=True)
           api.upload_file(path_or_fileobj=fname, path_in_repo=fname, repo_id=repo,
-                          repo_type='model', commit_message=f'mirror {fname} (CI)')
+                          repo_type='dataset', commit_message=f'mirror {fname} (latest-only)')
           api.upload_file(path_or_fileobj='manifest.txt', path_in_repo='manifest.txt', repo_id=repo,
-                          repo_type='model', commit_message='mirror manifest (CI)')
-          print('HuggingFace 同步完成:', repo)
+                          repo_type='dataset', commit_message='mirror manifest (latest-only)')
+          api.upload_file(path_or_fileobj='mirror_readme.md', path_in_repo='README.md', repo_id=repo,
+                          repo_type='dataset', commit_message='mirror readme (latest-only)')
+          # 兜底清理: 删仓失败时把旧版安装包从 HEAD 移除
+          for f in api.list_repo_files(repo_id=repo, repo_type='dataset'):
+              if f.startswith('PCGuy-setup-') and f.endswith('.exe') and f != fname:
+                  api.delete_file(path_in_repo=f, repo_id=repo, repo_type='dataset',
+                                  commit_message=f'remove old {f} (latest-only)')
+                  print('已清理旧版本:', f)
+          print('HuggingFace dataset 同步完成:', repo)
           PY
 
-      - name: Sync to ModelScope
+      - name: Sync to ModelScope (dataset 同步 + 旧版清理, latest-only)
         env:
           MS_TOKEN: ${{ secrets.MS_TOKEN }}
-          MS_REPO: luoyunlan168/pcguy_r
           FNAME: ${{ steps.rel.outputs.fname }}
+          ROUTER: ${{ steps.rel.outputs.router }}
         run: |
           set -euo pipefail
           pip install -q modelscope
@@ -126,16 +167,45 @@ jobs:
           import os, shutil, sys
           tok = os.environ.get('MS_TOKEN', '').strip()
           if not tok:
-              print('::warning::MS_TOKEN 未配置, 跳过 ModelScope 同步 '
-                    '(在仓库 Settings → Secrets 添加 MS_TOKEN 后, 模型仓即随发版自动更新)')
+              print('::warning::MS_TOKEN 未配置, 跳过 ModelScope 同步')
               sys.exit(0)
-          os.makedirs('ms_dist', exist_ok=True)
-          shutil.copy(os.environ['FNAME'], 'ms_dist/')
-          shutil.copy('manifest.txt', 'ms_dist/')
-          from modelscope.hub.api import HubApi
-          api = HubApi()
-          # modelscope>=1.40: login/push_model 已移除, 用 HF 风格 upload_folder + token=
-          api.upload_folder(repo_id=os.environ['MS_REPO'], folder_path='ms_dist', token=tok,
-                            commit_message='mirror release (CI)')
-          print('ModelScope 同步完成:', os.environ['MS_REPO'])
+          from modelscope_hub.api import HubApi
+          api = HubApi(token=tok)
+          repo, dist = 'luoyunlan168/pcguy_r', 'ms_dist'
+          fname = os.environ['FNAME']
+          shutil.rmtree(dist, ignore_errors=True); os.makedirs(dist)
+          shutil.copy(fname, dist)
+          shutil.copy('manifest.txt', dist)
+          shutil.copy('mirror_readme.md', os.path.join(dist, 'README.md'))
+          if os.environ.get('ROUTER', '').strip():
+              shutil.copy(os.environ['ROUTER'], os.path.join(dist, 'pcguy-router.exe'))
+          try:
+              api.create_repo(repo_id=repo, repo_type='dataset', license='apache-2.0',
+                              chinese_name='PCGuy 安装包镜像')
+          except Exception:
+              pass                                        # 已存在则忽略
+          api.upload_folder(repo_id=repo, repo_type='dataset', folder_path=dist,
+                            commit_message='mirror latest-only (CI)')
+          # HEAD 清理: ModelScope 限制 API 删仓, 旧版安装包从 HEAD 移除 (历史清空需网页端)
+          def _names(files):
+              out = []
+              for f in files:
+                  if isinstance(f, str): out.append(f)
+                  elif isinstance(f, dict): out.append(f.get('Path') or f.get('Name') or f.get('path'))
+                  else: out.append(getattr(f, 'path', None) or getattr(f, 'Path', None))
+              return [x for x in out if x]
+          try:
+              files = _names(api.list_repo_files(repo_id=repo, repo_type='dataset'))
+          except Exception as e:
+              print('::warning::文件列表获取失败, 跳过清理:', e)
+              files = []
+          old = [f for f in files if f.startswith('PCGuy-setup-') and f.endswith('.exe') and f != fname]
+          if old:
+              try:
+                  api.delete_files(repo_id=repo, repo_type='dataset', file_paths=old,
+                                   commit_message='latest-only cleanup (CI)')
+                  print('已清理旧版本:', old)
+              except Exception as e:
+                  print('::warning::旧版清理失败:', e)
+          print('ModelScope dataset 同步完成:', repo)
           PY
