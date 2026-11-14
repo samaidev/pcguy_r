@@ -1,0 +1,133 @@
+# sync-release-mirrors: Release 发布后自动——
+#   1) 下载安装包资产并重算 manifest.txt, 提交回本仓库 master (GitHub raw 清单立即生效)
+#   2) 同步安装包 + manifest 到 HuggingFace 镜像仓
+#   3) 同步安装包 + manifest 到 ModelScope 镜像仓 (未配置 MS_TOKEN 时自动跳过)
+# 凭证全部放仓库 Secrets, 不落任何明文: HF_TOKEN / MS_TOKEN (Settings → Secrets and variables → Actions)
+name: sync-release-mirrors
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-mirrors
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve release asset
+        id: rel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.event.release.tag_name }}"
+          else
+            TAG="$(gh api "repos/${{ github.repository }}/releases/latest" --jq .tag_name)"
+          fi
+          URL="$(gh api "repos/${{ github.repository }}/releases/tags/$TAG" \
+            --jq '.assets[] | select(.name | test("^PCGuy-setup-.*\\.exe$")) | .browser_download_url' | head -1)"
+          if [ -z "$URL" ]; then
+            echo "::error::tag $TAG 下未找到 PCGuy-setup-*.exe 安装包资产"
+            exit 1
+          fi
+          FNAME="${URL##*/}"
+          VER="${TAG#v}"
+          curl -fsSL --retry 3 -o "$FNAME" "$URL"
+          echo "tag=$TAG"     >> "$GITHUB_OUTPUT"
+          echo "ver=$VER"     >> "$GITHUB_OUTPUT"
+          echo "fname=$FNAME" >> "$GITHUB_OUTPUT"
+
+      - name: Generate manifest
+        env:
+          VER: ${{ steps.rel.outputs.ver }}
+          FNAME: ${{ steps.rel.outputs.fname }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, os
+          fname, ver = os.environ['FNAME'], os.environ['VER']
+          h = hashlib.sha256()
+          with open(fname, 'rb') as f:
+              for chunk in iter(lambda: f.read(1 << 20), b''):
+                  h.update(chunk)
+          manifest = f"v{ver}\n{fname}\n{os.path.getsize(fname)}\n{h.hexdigest()}\n"
+          open('manifest.txt', 'w').write(manifest)
+          print(manifest)
+          PY
+
+      - name: Commit manifest to master (GitHub raw 清单自动更新)
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin master
+          git reset --hard origin/master
+          git add manifest.txt
+          if git diff --cached --quiet; then
+            echo "manifest 无变化, 跳过提交"
+          else
+            git commit -m "chore: sync manifest to ${{ steps.rel.outputs.tag }} (CI)"
+            git push origin master
+          fi
+
+      - name: Sync to HuggingFace
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_REPO: tchbcb/pcguy_r
+          FNAME: ${{ steps.rel.outputs.fname }}
+        run: |
+          set -euo pipefail
+          pip install -q "huggingface_hub>=0.30"
+          python3 - <<'PY'
+          import os, sys
+          tok = os.environ.get('HF_TOKEN', '').strip()
+          if not tok:
+              print('::warning::HF_TOKEN 未配置, 跳过 HuggingFace 同步')
+              sys.exit(0)
+          from huggingface_hub import HfApi
+          api = HfApi(token=tok)
+          repo = os.environ['HF_REPO']
+          fname = os.environ['FNAME']
+          api.create_repo(repo_id=repo, repo_type='model', private=False, exist_ok=True)
+          api.upload_file(path_or_fileobj=fname, path_in_repo=fname, repo_id=repo,
+                          repo_type='model', commit_message=f'mirror {fname} (CI)')
+          api.upload_file(path_or_fileobj='manifest.txt', path_in_repo='manifest.txt', repo_id=repo,
+                          repo_type='model', commit_message='mirror manifest (CI)')
+          print('HuggingFace 同步完成:', repo)
+          PY
+
+      - name: Sync to ModelScope
+        env:
+          MS_TOKEN: ${{ secrets.MS_TOKEN }}
+          MS_REPO: luoyunlan168/pcguy_r
+          FNAME: ${{ steps.rel.outputs.fname }}
+        run: |
+          set -euo pipefail
+          pip install -q modelscope
+          python3 - <<'PY'
+          import os, shutil, sys
+          tok = os.environ.get('MS_TOKEN', '').strip()
+          if not tok:
+              print('::warning::MS_TOKEN 未配置, 跳过 ModelScope 同步 '
+                    '(在仓库 Settings → Secrets 添加 MS_TOKEN 后, 模型仓即随发版自动更新)')
+              sys.exit(0)
+          os.makedirs('ms_dist', exist_ok=True)
+          shutil.copy(os.environ['FNAME'], 'ms_dist/')
+          shutil.copy('manifest.txt', 'ms_dist/')
+          from modelscope.hub.api import HubApi
+          api = HubApi()
+          api.login(tok)
+          api.push_model(os.environ['MS_REPO'], model_dir='ms_dist')
+          print('ModelScope 同步完成:', os.environ['MS_REPO'])
+          PY
