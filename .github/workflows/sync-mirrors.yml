@@ -1,5 +1,6 @@
 # sync-release-mirrors: Release 发布后自动——
-#   1) 下载安装包资产并重算 manifest.txt, 提交回本仓库 master (GitHub raw 清单立即生效)
+#   1) 从最新统一发布(同一 Release 内含 PCGuy-setup-*.exe + pcguy-router.exe)取资产,
+#      重算 manifest.txt 并提交回本仓库 master (GitHub raw 清单立即生效)
 #   2) HuggingFace dataset 镜像 (tchbcb/pcguy_r): 删仓重建, 历史永远只有最新一版
 #   3) ModelScope dataset 镜像 (luoyunlan168/pcguy_r): 同步上传 + 清理旧版 exe
 # 镜像执行 latest-only 策略: 只保留当前最新安装包, 真实文件名原样上传, 不做任何改名/伪装。
@@ -25,29 +26,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Resolve release assets (installer + router)
+      - name: Resolve release assets (setup + router, 同一统一发布)
         id: rel
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          # 只认 PCGuy-setup-*.exe 安装包资产; workflow_dispatch 时从全部 Release
-          # 按最新优先找安装包, 自动跳过 router 等非安装器发布, 避免误同步/误报
+          # 统一发布结构: setup 与 router 是同一个 Release 的资产。
+          # release 事件用触发该次的 tag; workflow_dispatch 从全部 Release 按
+          # 最新优先找第一个含 PCGuy-setup-*.exe 的(自动跳过历史非安装器发布)
           if [ "${{ github.event_name }}" = "release" ]; then
             TAG="${{ github.event.release.tag_name }}"
-            URL="$(gh api "repos/${{ github.repository }}/releases/tags/$TAG" \
-              --jq '[.assets[] | select(.name | test("^PCGuy-setup-.*\\.exe$")) | .browser_download_url][0]')"
-            if [ -z "$URL" ]; then
-              echo "::notice::tag $TAG 下没有 PCGuy-setup-*.exe 安装包(如 router 发布), 跳过镜像同步"
-              exit 0
-            fi
+            gh api "repos/${{ github.repository }}/releases/tags/$TAG" > rel.json
           else
-            URL="$(gh api "repos/${{ github.repository }}/releases?per_page=100" \
-              --jq '[.[] | .assets[]? | select(.name | test("^PCGuy-setup-.*\\.exe$")) | .browser_download_url][0]')"
-            if [ -z "$URL" ]; then
-              echo "::error::所有 Release 中均未找到 PCGuy-setup-*.exe 安装包资产"
-              exit 1
-            fi
+            gh api "repos/${{ github.repository }}/releases?per_page=100" \
+              --jq '[.[] | select(any(.assets[]; .name | test("^PCGuy-setup-.*\\.exe$")))][0]' > rel.json
+          fi
+          if [ ! -s rel.json ] || [ "$(jq -r '.message // empty' rel.json)" = "Not Found" ]; then
+            echo "::notice::没有找到包含 PCGuy-setup-*.exe 的发布, 跳过镜像同步"
+            exit 0
+          fi
+          URL="$(jq -r '[.assets[] | select(.name | test("^PCGuy-setup-.*\\.exe$")) | .browser_download_url][0]' rel.json)"
+          if [ -z "$URL" ] || [ "$URL" = "null" ]; then
+            echo "::notice::发布中未找到安装包资产, 跳过镜像同步"
+            exit 0
           fi
           FNAME="${URL##*/}"
           VER="${FNAME#PCGuy-setup-}"; VER="${VER%.exe}"
@@ -55,14 +57,13 @@ jobs:
           echo "tag=${FNAME%.exe}" >> "$GITHUB_OUTPUT"
           echo "ver=$VER"     >> "$GITHUB_OUTPUT"
           echo "fname=$FNAME" >> "$GITHUB_OUTPUT"
-          # router exe (ModelScope 镜像附带, 尽力而为; 取最新 router-* 发布)
-          RURL="$(gh api "repos/${{ github.repository }}/releases?per_page=100" \
-            --jq '[.[] | select(.tag_name | startswith("router-")) | .assets[]? | select(.name == "pcguy-router.exe") | .browser_download_url][0]')"
-          if [ -n "$RURL" ]; then
+          # router exe: 与安装包同一发布内取, 尽力而为
+          RURL="$(jq -r '[.assets[] | select(.name == "pcguy-router.exe") | .browser_download_url][0]' rel.json)"
+          if [ -n "$RURL" ] && [ "$RURL" != "null" ]; then
             curl -fsSL --retry 3 -o ms-router.exe "$RURL"
             echo "router=ms-router.exe" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::未找到 router-* 发布的 pcguy-router.exe, ModelScope 镜像沿用旧路由器文件"
+            echo "::warning::统一发布内暂无 pcguy-router.exe, ModelScope 镜像沿用旧路由器文件"
             echo "router=" >> "$GITHUB_OUTPUT"
           fi
 
@@ -81,12 +82,18 @@ jobs:
           下载后请核对 manifest.txt 中记录的 SHA-256 以验证文件完整性。
           MD
 
-      - name: Generate manifest
+      - name: Regenerate manifest & commit to master (先重置再生成, GitHub raw 立即生效)
         env:
           VER: ${{ steps.rel.outputs.ver }}
           FNAME: ${{ steps.rel.outputs.fname }}
         run: |
           set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # 关键顺序: 先对齐远端 master, 再生成 manifest ——
+          # 旧版先 add 后 reset 的写法会被 reset --hard 冲掉新清单, 导致永远"无变化"
+          git fetch origin master
+          git reset --hard FETCH_HEAD
           python3 - <<'PY'
           import hashlib, os
           fname, ver = os.environ['FNAME'], os.environ['VER']
@@ -98,20 +105,12 @@ jobs:
           open('manifest.txt', 'w').write(manifest)
           print(manifest)
           PY
-
-      - name: Commit manifest to master (GitHub raw 清单自动更新)
-        run: |
-          set -euo pipefail
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git fetch origin master
-          git reset --hard origin/master
           git add manifest.txt
           if git diff --cached --quiet; then
             echo "manifest 无变化, 跳过提交"
           else
-            git commit -m "chore: sync manifest to v${{ steps.rel.outputs.ver }} (CI)"
-            git push origin master
+            git commit -m "chore: sync manifest to v${VER} (CI)"
+            git push origin HEAD:master
           fi
 
       - name: Sync to HuggingFace (dataset 删仓重建, latest-only)
