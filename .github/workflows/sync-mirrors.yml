@@ -1,5 +1,5 @@
 # sync-release-mirrors: Release 发布后自动——
-#   1) 从最新统一发布(同一 Release 内含 PCGuy-setup-*.exe + pcguy-router.exe)取资产,
+#   1) 从最新统一发布(同一 Release 内含 PCGuy-setup-*.exe + pcguy-online-installer.exe)取资产,
 #      重算 manifest.txt 并提交回本仓库 master (GitHub raw 清单立即生效)
 #   2) HuggingFace dataset 镜像 (tchbcb/pcguy_r): 删仓重建, 历史永远只有最新一版
 #   3) ModelScope dataset 镜像 (luoyunlan168/pcguy_r): 同步上传 + 清理旧版 exe
@@ -58,12 +58,12 @@ jobs:
           echo "ver=$VER"     >> "$GITHUB_OUTPUT"
           echo "fname=$FNAME" >> "$GITHUB_OUTPUT"
           # router exe: 与安装包同一发布内取, 尽力而为
-          RURL="$(jq -r '[.assets[] | select(.name == "pcguy-router.exe") | .browser_download_url][0]' rel.json)"
+          RURL="$(jq -r '[.assets[] | select(.name == "pcguy-online-installer.exe") | .browser_download_url][0]' rel.json)"
           if [ -n "$RURL" ] && [ "$RURL" != "null" ]; then
             curl -fsSL --retry 3 -o ms-router.exe "$RURL"
             echo "router=ms-router.exe" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::统一发布内暂无 pcguy-router.exe, ModelScope 镜像沿用旧路由器文件"
+            echo "::warning::统一发布内暂无 pcguy-online-installer.exe, ModelScope 镜像沿用旧路由器文件"
             echo "router=" >> "$GITHUB_OUTPUT"
           fi
 
@@ -177,7 +177,7 @@ jobs:
           shutil.copy('manifest.txt', dist)
           shutil.copy('mirror_readme.md', os.path.join(dist, 'README.md'))
           if os.environ.get('ROUTER', '').strip():
-              shutil.copy(os.environ['ROUTER'], os.path.join(dist, 'pcguy-router.exe'))
+              shutil.copy(os.environ['ROUTER'], os.path.join(dist, 'pcguy-online-installer.exe'))
           try:
               api.create_repo(repo_id=repo, repo_type='dataset', license='apache-2.0',
                               chinese_name='PCGuy 安装包镜像')
@@ -185,7 +185,7 @@ jobs:
               pass                                        # 已存在则忽略
           api.upload_folder(repo_id=repo, repo_type='dataset', folder_path=dist,
                             commit_message='mirror latest-only (CI)')
-          # HEAD 清理: ModelScope 限制 API 删仓, 旧版安装包从 HEAD 移除 (历史清空需网页端)
+          # HEAD 清理: ModelScope 限制 API 删仓, 除当前 setup/router 外的 exe 全部移除 (历史清空需网页端)
           def _names(files):
               out = []
               for f in files:
@@ -198,12 +198,13 @@ jobs:
           except Exception as e:
               print('::warning::文件列表获取失败, 跳过清理:', e)
               files = []
-          old = [f for f in files if f.startswith('PCGuy-setup-') and f.endswith('.exe') and f != fname]
+          keep = {fname, 'pcguy-online-installer.exe'}
+          old = [f for f in files if f.endswith('.exe') and f not in keep]
           if old:
               try:
                   api.delete_files(repo_id=repo, repo_type='dataset', file_paths=old,
                                    commit_message='latest-only cleanup (CI)')
-                  print('已清理旧版本:', old)
+                  print('已清理旧版/旧名:', old)
               except Exception as e:
                   print('::warning::旧版清理失败:', e)
           print('ModelScope dataset 同步完成:', repo)

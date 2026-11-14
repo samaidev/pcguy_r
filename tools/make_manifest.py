@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate manifest.txt for the PCGuy download router (pcguy-router.exe).
+"""Generate manifest.txt for the PCGuy download router (pcguy-online-installer.exe).
 
 Usage:
     python make_manifest.py <version> <installer.exe>

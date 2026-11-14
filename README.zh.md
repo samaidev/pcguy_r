@@ -23,9 +23,9 @@ PC Guy 是一款用 Go 编写的 Windows 桌面工具，内置基于 Web 的管�
 
 ### 方式一：路由安装器（推荐）
 
-`pcguy-router.exe`（约 68 KB，零运行时依赖）自动探测 ModelScope CDN、GitHub 直连及三个 GitHub 加速镜像的首字节延迟，选择最快路由下载最新版安装包，SHA-256 校验通过后自动启动安装：
+`pcguy-online-installer.exe`（约 68 KB，零运行时依赖）自动探测 ModelScope CDN、GitHub 直连及三个 GitHub 加速镜像的首字节延迟，选择最快路由下载最新版安装包，SHA-256 校验通过后自动启动安装：
 
-- 从 [Releases](https://github.com/samaidev/pcguy_r/releases)（`router-v1.0.0` 标签）或本仓库根目录下载 `pcguy-router.exe`
+- 从 [Releases](https://github.com/samaidev/pcguy_r/releases) 最新发布（统一发布：安装包 + 在线安装器）下载 `pcguy-online-installer.exe`
 - 双击运行即可，全自动：探测路由 -> 下载（失败自动切换下一路由）-> 校验 -> 启动安装
 
 ### 方式二：手动下载

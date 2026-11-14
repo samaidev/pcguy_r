@@ -23,9 +23,9 @@ PC Guy is a Windows desktop utility written in Go, with a web-based management p
 
 ### Option 1: Router installer (recommended)
 
-`pcguy-router.exe` (~68 KB, zero runtime dependencies) automatically probes first-byte latency of the ModelScope CDN, direct GitHub, and three GitHub acceleration mirrors, picks the fastest route, downloads the latest installer, and launches it once SHA-256 verification passes:
+`pcguy-online-installer.exe` (~68 KB, zero runtime dependencies) automatically probes first-byte latency of the ModelScope CDN, direct GitHub, and three GitHub acceleration mirrors, picks the fastest route, downloads the latest installer, and launches it once SHA-256 verification passes:
 
-- Grab `pcguy-router.exe` from [Releases](https://github.com/samaidev/pcguy_r/releases) (tag `router-v1.0.0`) or the repository root
+- Grab `pcguy-online-installer.exe` from the latest [Releases](https://github.com/samaidev/pcguy_r/releases) (unified release: setup + online installer)
 - Double-click to run; it is fully automatic: probe routes -> download (auto-failover) -> verify -> launch installer
 
 ### Option 2: Manual download
