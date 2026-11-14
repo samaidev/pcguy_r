@@ -35,14 +35,14 @@ jobs:
           if [ "${{ github.event_name }}" = "release" ]; then
             TAG="${{ github.event.release.tag_name }}"
             URL="$(gh api "repos/${{ github.repository }}/releases/tags/$TAG" \
-              --jq '.assets[] | select(.name | test("^PCGuy-setup-.*\\.exe$")) | .browser_download_url' | head -1)"
+              --jq '[.assets[] | select(.name | test("^PCGuy-setup-.*\\.exe$")) | .browser_download_url][0]')"
             if [ -z "$URL" ]; then
               echo "::notice::tag $TAG 下没有 PCGuy-setup-*.exe 安装包(如 router 发布), 跳过镜像同步"
               exit 0
             fi
           else
-            URL="$(gh api "repos/${{ github.repository }}/releases?per_page=100" --paginate \
-              --jq '.[] | .assets[]? | select(.name | test("^PCGuy-setup-.*\\.exe$")) | .browser_download_url' | head -1)"
+            URL="$(gh api "repos/${{ github.repository }}/releases?per_page=100" \
+              --jq '[.[] | .assets[]? | select(.name | test("^PCGuy-setup-.*\\.exe$")) | .browser_download_url][0]')"
             if [ -z "$URL" ]; then
               echo "::error::所有 Release 中均未找到 PCGuy-setup-*.exe 安装包资产"
               exit 1
