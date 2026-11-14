@@ -127,7 +127,8 @@ jobs:
           shutil.copy('manifest.txt', 'ms_dist/')
           from modelscope.hub.api import HubApi
           api = HubApi()
-          api.login(tok)
-          api.push_model(os.environ['MS_REPO'], model_dir='ms_dist')
+          # modelscope>=1.40: login/push_model 已移除, 用 HF 风格 upload_folder + token=
+          api.upload_folder(repo_id=os.environ['MS_REPO'], folder_path='ms_dist', token=tok,
+                            commit_message='mirror release (CI)')
           print('ModelScope 同步完成:', os.environ['MS_REPO'])
           PY
