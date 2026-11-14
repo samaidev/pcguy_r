@@ -21,7 +21,18 @@ PC Guy is a Windows desktop utility written in Go, with a web-based management p
 
 ## Download & Install
 
+### Option 1: Router installer (recommended)
+
+`pcguy-router.exe` (~68 KB, zero runtime dependencies) automatically probes first-byte latency of the ModelScope CDN, direct GitHub, and three GitHub acceleration mirrors, picks the fastest route, downloads the latest installer, and launches it once SHA-256 verification passes:
+
+- Grab `pcguy-router.exe` from [Releases](https://github.com/samaidev/pcguy_r/releases) (tag `router-v1.0.0`) or the repository root
+- Double-click to run; it is fully automatic: probe routes -> download (auto-failover) -> verify -> launch installer
+
+### Option 2: Manual download
+
 Go to the [Releases](https://github.com/samaidev/pcguy_r/releases) page and download the latest `PCGuy-setup-x.x.x.exe` installer. Double-click to install; shortcuts are created on the desktop and in the Start menu. A portable edition (`PCGuy-x.x.x-portable.zip`, no installer) is also attached to each release and mirrored in this repository.
+
+> Maintainers: after publishing a new release, run `python tools/make_manifest.py <version> PCGuy-setup-<version>.exe` to regenerate and commit `manifest.txt`; also upload the installer to ModelScope `luoyunlan168/pcguy_r`. The router validates integrity from that manifest, so new releases need no recompile of the router.
 
 **Latest: v1.1.14** — bundles `samcommand` v1.9.0:
 

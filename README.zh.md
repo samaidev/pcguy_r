@@ -21,9 +21,20 @@ PC Guy 是一款用 Go 编写的 Windows 桌面工具，内置基于 Web 的管�
 
 ## 下载与安装
 
+### 方式一：路由安装器（推荐）
+
+`pcguy-router.exe`（约 68 KB，零运行时依赖）自动探测 ModelScope CDN、GitHub 直连及三个 GitHub 加速镜像的首字节延迟，选择最快路由下载最新版安装包，SHA-256 校验通过后自动启动安装：
+
+- 从 [Releases](https://github.com/samaidev/pcguy_r/releases)（`router-v1.0.0` 标签）或本仓库根目录下载 `pcguy-router.exe`
+- 双击运行即可，全自动：探测路由 -> 下载（失败自动切换下一路由）-> 校验 -> 启动安装
+
+### 方式二：手动下载
+
 前往 [Releases](https://github.com/samaidev/pcguy_r/releases) 页面，下载最新的 `PCGuy-setup-x.x.x.exe` 安装包，双击安装即可；桌面和开始菜单都会创建快捷方式。
 
 便携版（`PCGuy-x.x.x-portable.zip`，免安装）随每个 Release 附带，并镜像保存在本仓库中。
+
+> 维护者提示：发布新版本后，运行 `python tools/make_manifest.py <版本号> PCGuy-setup-<版本号>.exe` 重新生成并提交 `manifest.txt`；同时请把安装包上传到 ModelScope `luoyunlan168/pcguy_r`。路由器通过该清单校验完整性，发新版本无需重新编译路由器。
 
 **最新版本：v1.1.14** — 内置 `samcommand` v1.9.0：
 
