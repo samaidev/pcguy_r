@@ -1,4 +1,4 @@
-v1.3.72
-PCGuy-setup-1.3.72.exe
-21322773
-fc4bda7713d5accceefa86c962df51d15aa5d7568da82f5afb952dadd7ae7585
+v1.3.73
+PCGuy-setup-1.3.73.exe
+21327709
+8a2a7a02a1e2abaed7ae4fc497b1bd83742bc4b8a07e94d63dc001623c65a43b
